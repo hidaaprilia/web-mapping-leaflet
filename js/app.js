@@ -67,6 +67,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (loadingOverlay) loadingOverlay.classList.add("hidden");
   }
 
+  // --- Cryptographic SHA-256 Helper (Web Crypto API) ---
+  async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(String(message).trim());
+    const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
   // --- Password Storage Helpers ---
   function getCustomPasswords() {
     try {
@@ -76,9 +84,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  function saveCustomPassword(key, newPass) {
+  function saveCustomPassword(key, newHash) {
     const map = getCustomPasswords();
-    map[key.toLowerCase()] = newPass;
+    map[key.toLowerCase()] = newHash;
     localStorage.setItem("bps_custom_passwords", JSON.stringify(map));
   }
 
@@ -96,8 +104,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       state.usersDatabase = json.map((row) => {
         const u = String(row.username || "").trim().toLowerCase();
         const nip = String(row.nip_lama || "").trim();
-        const defaultP = String(row.password || nip).trim();
-        const activeP = customPass[u] || customPass[nip] || defaultP;
+        const fileHash = String(row.password_hash || row.password || "").trim();
+        const activeHash = customPass[u] || customPass[nip] || fileHash;
 
         return {
           username: u,
@@ -105,16 +113,34 @@ document.addEventListener("DOMContentLoaded", async function () {
           nama: String(row.nama || "").trim(),
           email: String(row.email || "").trim(),
           role: String(row.role || "Organik BPS 1507").trim(),
-          password: activeP,
+          passwordHash: activeHash,
         };
       });
     } catch (err) {
       console.warn("Gagal memuat users.xlsx via fetch, gunakan fallback default:", err);
       // Fallback data jika fetch file lokal terkendala
       state.usersDatabase = [
-        { username: "adindaizzata", nip_lama: "340061620", nama: "Adinda Izzata", role: "Organik BPS 1507", password: customPass["adindaizzata"] || "340061620" },
-        { username: "sofiam", nip_lama: "340017818", nama: "Sofia M.", role: "Organik BPS 1507", password: customPass["sofiam"] || "340017818" },
-        { username: "eksternal.mitra", nip_lama: "150700001", nama: "Mitra Lapangan", role: "Eksternal yang diundang", password: customPass["eksternal.mitra"] || "mitra1507" },
+        {
+          username: "adindaizzata",
+          nip_lama: "340061620",
+          nama: "Adinda Izzata",
+          role: "Organik BPS 1507",
+          passwordHash: customPass["adindaizzata"] || "e5ed3aced8472761ed200b4eaaf844461adcc9d038cf9208659f31a7f7b69a1b",
+        },
+        {
+          username: "sofiam",
+          nip_lama: "340017818",
+          nama: "Sofia M.",
+          role: "Organik BPS 1507",
+          passwordHash: customPass["sofiam"] || "6b17da5c290a3c7e0988716a4f94fc23bc11ec189ca810dc25e9dd33cc929555",
+        },
+        {
+          username: "eksternal.mitra",
+          nip_lama: "150700001",
+          nama: "Mitra Lapangan",
+          role: "Eksternal yang diundang",
+          passwordHash: customPass["eksternal.mitra"] || "9d361845bb0e0ffb0870954f676be3905e94b2886f481a54fae8601dfa27f671",
+        },
       ];
     }
   }
@@ -189,19 +215,20 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  function loginUser(inputIdentifier, inputPassword) {
+  async function loginUser(inputIdentifier, inputPassword) {
     const errorBox = document.getElementById("login-error-msg");
     errorBox.style.display = "none";
 
     const cleanInput = inputIdentifier.trim().toLowerCase().replace("@bps.go.id", "");
     const cleanPass = inputPassword.trim();
+    const inputHash = await sha256(cleanPass);
 
-    // Match with Excel users database
-    const userMatch = state.usersDatabase.find(
-      (u) =>
-        (u.username === cleanInput || u.nip_lama === cleanInput) &&
-        (u.password === cleanPass || u.nip_lama === cleanPass)
-    );
+    // Match with Excel users database (matching SHA-256 hash or fallback during transition)
+    const userMatch = state.usersDatabase.find((u) => {
+      const matchIdentity = u.username === cleanInput || u.nip_lama === cleanInput;
+      if (!matchIdentity) return false;
+      return u.passwordHash === inputHash || u.passwordHash === cleanPass;
+    });
 
     if (userMatch) {
       state.currentUser = {
@@ -210,7 +237,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         nip_lama: userMatch.nip_lama,
         email: userMatch.email,
         role: userMatch.role,
-        password: userMatch.password,
+        passwordHash: userMatch.passwordHash,
         loginTime: new Date().toISOString(),
       };
       localStorage.setItem("bps_web_map_user", JSON.stringify(state.currentUser));
@@ -535,11 +562,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       modalLogin.classList.remove("open");
     });
 
-    document.getElementById("form-login").addEventListener("submit", (e) => {
+    document.getElementById("form-login").addEventListener("submit", async (e) => {
       e.preventDefault();
       const usernameInput = document.getElementById("login-username").value;
       const passwordInput = document.getElementById("login-password").value;
-      loginUser(usernameInput, passwordInput);
+      await loginUser(usernameInput, passwordInput);
     });
 
     // --- Change Password Modal ---
@@ -565,7 +592,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     if (formChangePass) {
-      formChangePass.addEventListener("submit", (e) => {
+      formChangePass.addEventListener("submit", async (e) => {
         e.preventDefault();
         if (!state.currentUser) return;
 
@@ -573,9 +600,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         const newPass = document.getElementById("new-password").value.trim();
         const confirmPass = document.getElementById("confirm-password").value.trim();
 
-        // Validate old password
-        const currentPass = state.currentUser.password || state.currentUser.nip_lama;
-        if (oldPass !== currentPass && oldPass !== state.currentUser.nip_lama) {
+        // Validate old password using sha256
+        const oldHash = await sha256(oldPass);
+        const currentHash = state.currentUser.passwordHash;
+        if (oldHash !== currentHash && oldPass !== currentHash) {
           changePassMsg.style.display = "block";
           changePassMsg.style.background = "#fee2e2";
           changePassMsg.style.color = "#b91c1c";
@@ -594,17 +622,27 @@ document.addEventListener("DOMContentLoaded", async function () {
           return;
         }
 
-        // Save new password
-        state.currentUser.password = newPass;
-        saveCustomPassword(state.currentUser.username, newPass);
-        saveCustomPassword(state.currentUser.nip_lama, newPass);
+        if (newPass.length < 6) {
+          changePassMsg.style.display = "block";
+          changePassMsg.style.background = "#fee2e2";
+          changePassMsg.style.color = "#b91c1c";
+          changePassMsg.style.border = "1px solid #fecaca";
+          changePassMsg.innerText = "Kata sandi baru minimal 6 karakter!";
+          return;
+        }
+
+        // Save new password as SHA-256 hash
+        const newHash = await sha256(newPass);
+        state.currentUser.passwordHash = newHash;
+        saveCustomPassword(state.currentUser.username, newHash);
+        saveCustomPassword(state.currentUser.nip_lama, newHash);
 
         // Update in loaded usersDatabase
         const match = state.usersDatabase.find(
           (u) => u.username === state.currentUser.username || u.nip_lama === state.currentUser.nip_lama
         );
         if (match) {
-          match.password = newPass;
+          match.passwordHash = newHash;
         }
 
         localStorage.setItem("bps_web_map_user", JSON.stringify(state.currentUser));
@@ -613,7 +651,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         changePassMsg.style.background = "#dcfce7";
         changePassMsg.style.color = "#15803d";
         changePassMsg.style.border = "1px solid #bbf7d0";
-        changePassMsg.innerHTML = "<strong>Berhasil!</strong> Kata sandi Anda telah diperbarui.";
+        changePassMsg.innerHTML = "<strong>Berhasil!</strong> Kata sandi Anda telah diperbarui dan dienkripsi.";
         formChangePass.reset();
 
         setTimeout(() => {
@@ -636,7 +674,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           nama: u.nama,
           email: u.email,
           role: u.role,
-          password: u.password,
+          password_hash: u.passwordHash,
         }));
         const ws = XLSX.utils.json_to_sheet(exportRows);
         const wb = XLSX.utils.book_new();
