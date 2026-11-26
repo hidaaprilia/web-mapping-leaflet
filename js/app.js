@@ -939,10 +939,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         </div>
       `;
     } else {
+      const kdSubSls = props.kdsubsls || (props.idsubsls ? props.idsubsls.slice(-2) : "00");
       detailBox.innerHTML = `
         <div style="font-size: 0.8rem; line-height: 1.55;">
-          <strong>IDSLS:</strong> ${props.idsls || "-"}<br>
           <strong>ID Sub SLS:</strong> ${props.idsubsls || "-"}<br>
+          <strong>Kode Sub SLS:</strong> ${kdSubSls}<br>
+          <strong>IDSLS:</strong> ${props.idsls || "-"}<br>
+          <strong>Kode SLS:</strong> ${props.kdsls || "-"}<br>
           <strong>Nama SLS:</strong> ${props.nmsls || "-"}<br>
           <strong>Nama DESA:</strong> ${props.nmdesa || "-"}<br>
           <strong>Kecamatan:</strong> ${props.nmkec || "-"}
@@ -1295,8 +1298,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       tableHeader.innerHTML = `
         <tr>
           <th>No</th>
-          <th>IDSLS</th>
           <th>ID Sub SLS</th>
+          <th>Kode Sub SLS</th>
+          <th>IDSLS</th>
           <th>Kode SLS</th>
           <th>Nama SLS</th>
           <th>Kecamatan</th>
@@ -1307,16 +1311,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       features.slice(0, 500).forEach((f, idx) => {
         const p = f.properties;
+        const kdSub = p.kdsubsls || (p.idsubsls ? p.idsubsls.slice(-2) : "00");
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${idx + 1}</td>
-          <td><strong>${p.idsls || "-"}</strong></td>
           <td><code>${p.idsubsls || "-"}</code></td>
+          <td>${kdSub}</td>
+          <td><strong>${p.idsls || "-"}</strong></td>
           <td>${p.kdsls || "-"}</td>
           <td>${p.nmsls || "-"}</td>
           <td>${p.nmkec || "-"}</td>
           <td>${p.nmdesa || "-"}</td>
-          <td><button class="btn btn-secondary" style="padding:2px 8px;font-size:0.7rem;" onclick="window.zoomToId('${p.idsls}')">Fokus</button></td>
+          <td><button class="btn btn-secondary" style="padding:2px 8px;font-size:0.7rem;" onclick="window.zoomToId('${p.idsubsls || p.idsls}')">Fokus</button></td>
         `;
         tableBody.appendChild(tr);
       });
@@ -1352,8 +1358,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         };
       } else {
         return {
-          IDSLS: p.idsls,
           ID_Sub_SLS: p.idsubsls || "-",
+          Kode_Sub_SLS: p.kdsubsls || (p.idsubsls ? p.idsubsls.slice(-2) : "00"),
+          IDSLS: p.idsls,
           Kode_SLS: p.kdsls,
           Nama_SLS: p.nmsls,
           Kecamatan: p.nmkec,

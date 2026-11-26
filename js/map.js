@@ -200,10 +200,15 @@ const MapModule = (function () {
             `<strong>Nama DESA:</strong> ${namaDesa}<br>` +
             `<strong>Kecamatan:</strong> ${namaKec}`;
         } else {
-          // Untuk peta SLS: Label Nama SLS
+          // Untuk peta SLS: Tampilkan IDSUBSLS, Kode Sub SLS, IDSLS, Kode SLS
           const namaSls = p.nmsls || "-";
+          const idSubSls = p.idsubsls || (p.idsls ? p.idsls + (p.kdsubsls || "00") : "-");
+          const kdSubSls = p.kdsubsls || (p.idsubsls ? p.idsubsls.slice(-2) : "00");
           tooltipContent =
-            `<strong>${idLabel}:</strong> ${idVal || "-"}<br>` +
+            `<strong>IDSUBSLS:</strong> ${idSubSls}<br>` +
+            `<strong>Kode Sub SLS:</strong> ${kdSubSls}<br>` +
+            `<strong>IDSLS:</strong> ${p.idsls || "-"}<br>` +
+            `<strong>Kode SLS:</strong> ${p.kdsls || "-"}<br>` +
             `<strong>Nama SLS:</strong> ${namaSls}<br>` +
             `<strong>Nama DESA:</strong> ${namaDesa}<br>` +
             `<strong>Kecamatan:</strong> ${namaKec}`;
@@ -296,17 +301,20 @@ const MapModule = (function () {
         </div>
       `;
     } else {
+      const kdSubSls = props.kdsubsls || (props.idsubsls ? props.idsubsls.slice(-2) : "00");
       return `
         <div class="popup-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);">
           <h3>SLS: ${props.nmsls || props.idsls}</h3>
-          <p>IDSLS: ${props.idsls || "-"}</p>
+          <p>IDSUBSLS: ${props.idsubsls || (props.idsls ? props.idsls + "00" : "-")}</p>
         </div>
         <div class="popup-body">
+          <div class="popup-row"><span class="popup-label">ID Sub SLS:</span><span class="popup-val">${props.idsubsls || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">Kode Sub SLS:</span><span class="popup-val">${kdSubSls}</span></div>
+          <div class="popup-row"><span class="popup-label">IDSLS:</span><span class="popup-val">${props.idsls || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">Kode SLS:</span><span class="popup-val">${props.kdsls || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Nama SLS:</span><span class="popup-val">${props.nmsls || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Nama DESA:</span><span class="popup-val">${props.nmdesa || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Kecamatan:</span><span class="popup-val">${props.nmkec || "-"}</span></div>
-          <div class="popup-row"><span class="popup-label">Kode SLS:</span><span class="popup-val">${props.kdsls || "-"}</span></div>
-          <div class="popup-row"><span class="popup-label">ID Sub SLS:</span><span class="popup-val">${props.idsubsls || "-"}</span></div>
         </div>
       `;
     }
