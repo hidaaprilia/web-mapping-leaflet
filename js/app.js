@@ -827,24 +827,59 @@ document.addEventListener("DOMContentLoaded", async function () {
     const muatanLabelEl = document.getElementById("stat-muatan-label");
     const wilayahLabelEl = document.getElementById("stat-wilayah-label");
 
+    const hasSelection = state.highlightedIds && state.highlightedIds.size > 0;
+
+    // Jika ada target terpilih/tersorot, hitung statistik dari entitas yang tersorot
+    let targetFeatures = features;
+    if (hasSelection) {
+      const selected = features.filter((f) => {
+        const p = f.properties || {};
+        const idBs = String(p.idbs || "").trim();
+        const idSls = String(p.idsls || "").trim();
+        const idSubSls = String(p.idsubsls || "").trim();
+        return (
+          state.highlightedIds.has(idBs) ||
+          state.highlightedIds.has(idSls) ||
+          state.highlightedIds.has(idSubSls) ||
+          (idSubSls && state.highlightedIds.has(idSubSls.substring(0, 14))) ||
+          (idSls && state.highlightedIds.has(idSls + "00"))
+        );
+      });
+      if (selected.length > 0) {
+        targetFeatures = selected;
+      }
+    }
+
     if (state.currentMode === "bs") {
-      if (wilayahLabelEl) wilayahLabelEl.innerText = "JUMLAH BLOK SENSUS";
-      totalCountEl.innerText = features.length.toLocaleString("id-ID");
+      if (wilayahLabelEl) {
+        wilayahLabelEl.innerText = hasSelection ? "TARGET BS TERPILIH" : "JUMLAH BLOK SENSUS";
+      }
+      totalCountEl.innerText = targetFeatures.length.toLocaleString("id-ID");
 
       if (muatanLabelEl) muatanLabelEl.innerText = "TOTAL MUATAN / KK";
-      const totalMuatan = features.reduce((acc, f) => {
+      const totalMuatan = targetFeatures.reduce((acc, f) => {
         const val = Number(f.properties.muatan || f.properties.kk || 0);
         return acc + (isNaN(val) ? 0 : val);
       }, 0);
       totalMuatanEl.innerText = totalMuatan.toLocaleString("id-ID");
     } else {
-      if (wilayahLabelEl) wilayahLabelEl.innerText = "TOTAL WILAYAH (IDSUBSLS)";
-      const subslsSet = new Set(features.map((f) => f.properties && f.properties.idsubsls).filter(Boolean));
-      const totalWilayah = subslsSet.size > 0 ? subslsSet.size : features.length;
+      if (wilayahLabelEl) {
+        wilayahLabelEl.innerText = hasSelection ? "TARGET SLS TERPILIH" : "TOTAL WILAYAH (IDSUBSLS)";
+      }
+      const subslsSet = new Set(targetFeatures.map((f) => f.properties && f.properties.idsubsls).filter(Boolean));
+      const totalWilayah = subslsSet.size > 0 ? subslsSet.size : targetFeatures.length;
       totalCountEl.innerText = totalWilayah.toLocaleString("id-ID");
 
       if (muatanLabelEl) muatanLabelEl.innerText = "DESA TERCAKUP";
-      const desas = new Set(features.map((f) => f.properties.nmdesa).filter(Boolean));
+      const desas = new Set(
+        targetFeatures.map((f) => {
+          const p = f.properties || {};
+          const kdkec = String(p.kdkec || "");
+          const kddesa = String(p.kddesa || "");
+          if (kdkec && kddesa) return `${kdkec}_${kddesa}`;
+          return p.nmdesa;
+        }).filter(Boolean)
+      );
       totalMuatanEl.innerText = desas.size.toLocaleString("id-ID");
     }
   }
