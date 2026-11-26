@@ -35,8 +35,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     updateLoading("Memuat basis data pengguna (users.xlsx)...");
     await loadUsersDatabase();
 
-    updateLoading("Memuat data spasial batas desa...");
-    const desaRes = await fetch("data/peta_desa_202511507.geojson");
+    updateLoading("Memuat data spasial batas desa (2026)...");
+    const desaRes = await fetch("data/peta_desa_202611507.geojson");
     state.desaData = await desaRes.json();
 
     updateLoading("Memuat data spasial Blok Sensus (BS)...");
@@ -343,7 +343,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const uploadInfo = document.getElementById("upload-info");
     if (uploadInfo) {
-      uploadInfo.innerHTML = `<strong>Histori Dimuat:</strong> ${survey.name} (${survey.targetIds.length} target). Poligon disorot merah.`;
+      uploadInfo.innerHTML = `<strong>Histori Dimuat:</strong> ${survey.name} (${survey.targetIds.length} target). Poligon disorot oranye (#fda037).`;
       uploadInfo.style.color = "var(--primary-color)";
     }
 
@@ -1049,7 +1049,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         }).length;
 
         const infoEl = document.getElementById("upload-info");
-        infoEl.innerHTML = `✓ <strong>${matchedUploadedCount}</strong> dari <strong>${uniqueUploaded.length}</strong> target cocok di peta (Kolom: <code>${targetCol}</code>). Poligon disorot merah menyala.`;
+        infoEl.innerHTML = `✓ <strong>${matchedUploadedCount}</strong> dari <strong>${uniqueUploaded.length}</strong> target cocok di peta (Kolom: <code>${targetCol}</code>). Poligon disorot oranye (#fda037).`;
         infoEl.style.color = "#15803d";
 
         const containerOnlySamples = document.getElementById("container-only-samples");

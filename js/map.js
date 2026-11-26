@@ -101,34 +101,34 @@ const MapModule = (function () {
     }
   }
 
-  // Styles: BS HIJAU CERAH NEON, SLS BIRU TERANG CYAN, HIGHLIGHT MERAH MENYALA
+  // Styles: BS HIJAU (#a3f492), SLS BIRU (#7d95ff), HIGHLIGHT ORANYE (#fda037)
   function getStyle(feature, layerType, isHighlighted) {
     if (isHighlighted) {
       return {
-        color: "#ff1744", // Merah menyala / Neon Red
+        color: "#fda037", // Oranye terpilih
         weight: 3.5,
         opacity: 1,
-        fillColor: "#ff1744",
-        fillOpacity: 0.75,
+        fillColor: "#fda037",
+        fillOpacity: 0.7,
       };
     }
 
     if (layerType === "bs") {
-      // PETA BLOK SENSUS = HIJAU CERAH NEON (sangat kontras di peta gelap)
+      // PETA BLOK SENSUS = HIJAU (#a3f492)
       return {
-        color: "#00ff88", // Hijau cerah neon
+        color: "#a3f492",
         weight: 2,
-        opacity: 1,
-        fillColor: "#00e676", // Neon green fill
+        opacity: 0.95,
+        fillColor: "#a3f492",
         fillOpacity: 0.45,
       };
     } else if (layerType === "sls") {
-      // PETA SLS = BIRU TERANG CYAN (sangat kontras di peta gelap)
+      // PETA SLS = BIRU (#7d95ff)
       return {
-        color: "#00e5ff", // Biru cyan cerah
+        color: "#7d95ff",
         weight: 2,
-        opacity: 1,
-        fillColor: "#00b4d8", // Vivid blue fill
+        opacity: 0.95,
+        fillColor: "#7d95ff",
         fillOpacity: 0.45,
       };
     } else {
