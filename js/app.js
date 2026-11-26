@@ -343,7 +343,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const uploadInfo = document.getElementById("upload-info");
     if (uploadInfo) {
-      uploadInfo.innerHTML = `<strong>Histori Dimuat:</strong> ${survey.name} (${survey.targetIds.length} target). Poligon disorot oranye (#fda037).`;
+      uploadInfo.innerHTML = `<strong>Histori Dimuat:</strong> ${survey.name} (${survey.targetIds.length} target). Poligon disorot oranye.`;
       uploadInfo.style.color = "var(--primary-color)";
     }
 
@@ -516,25 +516,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       const usernameInput = document.getElementById("login-username").value;
       const passwordInput = document.getElementById("login-password").value;
       loginUser(usernameInput, passwordInput);
-    });
-
-    // Demo Buttons for Fast Testing
-    document.getElementById("btn-demo-organik1").addEventListener("click", () => {
-      document.getElementById("login-username").value = "adindaizzata";
-      document.getElementById("login-password").value = "340061620";
-      loginUser("adindaizzata", "340061620");
-    });
-
-    document.getElementById("btn-demo-organik2").addEventListener("click", () => {
-      document.getElementById("login-username").value = "sofiam";
-      document.getElementById("login-password").value = "340017818";
-      loginUser("sofiam", "340017818");
-    });
-
-    document.getElementById("btn-demo-eksternal").addEventListener("click", () => {
-      document.getElementById("login-username").value = "eksternal.mitra";
-      document.getElementById("login-password").value = "mitra1507";
-      loginUser("eksternal.mitra", "mitra1507");
     });
 
     // --- Change Password Modal ---
@@ -1049,7 +1030,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         }).length;
 
         const infoEl = document.getElementById("upload-info");
-        infoEl.innerHTML = `✓ <strong>${matchedUploadedCount}</strong> dari <strong>${uniqueUploaded.length}</strong> target cocok di peta (Kolom: <code>${targetCol}</code>). Poligon disorot oranye (#fda037).`;
+        infoEl.innerHTML = `✓ <strong>${matchedUploadedCount}</strong> dari <strong>${uniqueUploaded.length}</strong> target cocok di peta (Kolom: <code>${targetCol}</code>). Poligon disorot oranye.`;
         infoEl.style.color = "#15803d";
 
         const containerOnlySamples = document.getElementById("container-only-samples");
