@@ -227,8 +227,16 @@
   <!-- Data Table Modal / Bottom Drawer -->
   <div id="data-modal">
     <div class="modal-header">
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <h3 id="table-title" style="font-size: 0.95rem; font-weight: 700;">Tabel Data Terfilter</h3>
+        <div id="table-tab-container" style="display: none; gap: 4px; background: #e2e8f0; padding: 2px 4px; border-radius: 6px;">
+          <button type="button" id="btn-tab-selected-data" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.72rem;">
+            🎯 Target Terpilih (<span id="count-tab-selected">0</span>)
+          </button>
+          <button type="button" id="btn-tab-all-data" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.72rem;">
+            🌐 Semua Data (<span id="count-tab-all">0</span>)
+          </button>
+        </div>
         <button id="btn-export-csv" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">
           📥 Ekspor ke CSV
         </button>

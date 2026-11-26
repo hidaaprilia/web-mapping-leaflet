@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     filteredData: null,
     highlightedIds: new Set(),
     showOnlyUploaded: false,
+    tableMode: "selected", // 'selected' or 'all'
     selectedKecamatan: "",
     selectedDesa: "",
     searchId: "",
@@ -340,6 +341,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     // Set highlighted IDs from survey targets
     state.highlightedIds = new Set(survey.targetIds || []);
+    state.tableMode = "selected";
 
     const uploadInfo = document.getElementById("upload-info");
     if (uploadInfo) {
@@ -429,6 +431,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       state.highlightedIds.clear();
       state.activeSurveyId = null;
       state.showOnlyUploaded = false;
+      state.tableMode = "all";
       if (chkOnlySamples) chkOnlySamples.checked = false;
       const containerOnly = document.getElementById("container-only-samples");
       if (containerOnly) containerOnly.style.display = "none";
@@ -477,12 +480,33 @@ document.addEventListener("DOMContentLoaded", async function () {
     // Data Table Modal
     const modal = document.getElementById("data-modal");
     document.getElementById("btn-view-table").addEventListener("click", () => {
+      // Jika ada target terpilih, prioritaskan mode 'selected'
+      if (state.highlightedIds && state.highlightedIds.size > 0) {
+        state.tableMode = "selected";
+      } else {
+        state.tableMode = "all";
+      }
       renderDataTable();
       modal.classList.add("open");
     });
     document.getElementById("btn-close-modal").addEventListener("click", () => {
       modal.classList.remove("open");
     });
+
+    const btnTabSelected = document.getElementById("btn-tab-selected-data");
+    const btnTabAll = document.getElementById("btn-tab-all-data");
+    if (btnTabSelected) {
+      btnTabSelected.addEventListener("click", () => {
+        state.tableMode = "selected";
+        renderDataTable();
+      });
+    }
+    if (btnTabAll) {
+      btnTabAll.addEventListener("click", () => {
+        state.tableMode = "all";
+        renderDataTable();
+      });
+    }
 
     // Export CSV Button
     document.getElementById("btn-export-csv").addEventListener("click", exportFilteredCsv);
@@ -861,6 +885,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     state.highlightedIds.clear();
     state.activeSurveyId = null;
     state.showOnlyUploaded = false;
+    state.tableMode = "all";
 
     const chkOnly = document.getElementById("chk-only-samples");
     if (chkOnly) chkOnly.checked = false;
@@ -1013,6 +1038,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         state.highlightedIds = matchedIds;
         state.activeSurveyId = null;
+        state.tableMode = "selected";
 
         // Hitung total baris unik sampel yang berhasil cocok
         const uniqueUploaded = Array.from(new Set(rawUploadedList));
@@ -1065,20 +1091,98 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  // Helper to get features for table and export according to selection mode
+  function getFeaturesForTable() {
+    const allFiltered = state.filteredData ? state.filteredData.features : [];
+    const hasSelection = state.highlightedIds && state.highlightedIds.size > 0;
+
+    if (hasSelection && state.tableMode === "selected") {
+      return allFiltered.filter((f) => {
+        const p = f.properties || {};
+        const idBs = String(p.idbs || "").trim();
+        const idSls = String(p.idsls || "").trim();
+        const idSubSls = String(p.idsubsls || "").trim();
+        return (
+          state.highlightedIds.has(idBs) ||
+          state.highlightedIds.has(idSls) ||
+          state.highlightedIds.has(idSubSls) ||
+          (idSubSls && state.highlightedIds.has(idSubSls.substring(0, 14))) ||
+          (idSls && state.highlightedIds.has(idSls + "00"))
+        );
+      });
+    }
+
+    return allFiltered;
+  }
+
   // Render Table Modal
   function renderDataTable() {
     const tableHeader = document.getElementById("table-header");
     const tableBody = document.getElementById("table-body");
     const tableTitle = document.getElementById("table-title");
+    const btnTabSelected = document.getElementById("btn-tab-selected-data");
+    const btnTabAll = document.getElementById("btn-tab-all-data");
+    const countTabSelected = document.getElementById("count-tab-selected");
+    const countTabAll = document.getElementById("count-tab-all");
+    const tabContainer = document.getElementById("table-tab-container");
 
     tableHeader.innerHTML = "";
     tableBody.innerHTML = "";
 
-    const features = state.filteredData ? state.filteredData.features : [];
-    tableTitle.innerText = `Data Terfilter: ${features.length} Entitas (${state.currentMode.toUpperCase()})`;
+    const allFiltered = state.filteredData ? state.filteredData.features : [];
+    const hasSelection = state.highlightedIds && state.highlightedIds.size > 0;
+
+    const selectedFeatures = hasSelection
+      ? allFiltered.filter((f) => {
+          const p = f.properties || {};
+          const idBs = String(p.idbs || "").trim();
+          const idSls = String(p.idsls || "").trim();
+          const idSubSls = String(p.idsubsls || "").trim();
+          return (
+            state.highlightedIds.has(idBs) ||
+            state.highlightedIds.has(idSls) ||
+            state.highlightedIds.has(idSubSls) ||
+            (idSubSls && state.highlightedIds.has(idSubSls.substring(0, 14))) ||
+            (idSls && state.highlightedIds.has(idSls + "00"))
+          );
+        })
+      : [];
+
+    if (countTabSelected) countTabSelected.innerText = selectedFeatures.length;
+    if (countTabAll) countTabAll.innerText = allFiltered.length;
+
+    // Default mode: jika ada target terpilih, tampilkan target terpilih
+    if (hasSelection && (!state.tableMode || state.tableMode === "selected")) {
+      state.tableMode = "selected";
+    } else if (!hasSelection) {
+      state.tableMode = "all";
+    }
+
+    if (tabContainer) {
+      tabContainer.style.display = hasSelection ? "inline-flex" : "none";
+    }
+
+    if (btnTabSelected && btnTabAll) {
+      if (state.tableMode === "selected") {
+        btnTabSelected.className = "btn btn-primary";
+        btnTabAll.className = "btn btn-secondary";
+      } else {
+        btnTabSelected.className = "btn btn-secondary";
+        btnTabAll.className = "btn btn-primary";
+      }
+    }
+
+    const features = state.tableMode === "selected" ? selectedFeatures : allFiltered;
+    const modeLabel = state.currentMode.toUpperCase();
+
+    if (state.tableMode === "selected") {
+      tableTitle.innerText = `Data Terpilih: ${features.length} Entitas (${modeLabel})`;
+    } else {
+      tableTitle.innerText = `Semua Data Terfilter: ${features.length} Entitas (${modeLabel})`;
+    }
 
     if (features.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Tidak ada data yang sesuai filter.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 18px;">Tidak ada data yang sesuai filter atau pilihan ID.</td></tr>';
       return;
     }
 
@@ -1088,9 +1192,9 @@ document.addEventListener("DOMContentLoaded", async function () {
           <th>No</th>
           <th>IDBS</th>
           <th>Kode BS</th>
+          <th>Nama Wilayah</th>
           <th>Kecamatan</th>
           <th>Desa</th>
-          <th>SLS</th>
           <th>Muatan / KK</th>
           <th>Luas (m²)</th>
           <th>Aksi</th>
@@ -1099,14 +1203,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       features.slice(0, 500).forEach((f, idx) => {
         const p = f.properties;
+        const namaWilayah = p.nmsls ? `${p.nmsls}` : (p.nmdesa || "Wilayah");
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${idx + 1}</td>
           <td><strong>${p.idbs || "-"}</strong></td>
           <td>${p.kdbs || "-"}</td>
+          <td>${namaWilayah}</td>
           <td>${p.nmkec || "-"}</td>
           <td>${p.nmdesa || "-"}</td>
-          <td>${p.nmsls || "-"}</td>
           <td>${p.muatan || p.kk || "0"}</td>
           <td>${p.luas ? Number(p.luas).toFixed(1) : "-"}</td>
           <td><button class="btn btn-secondary" style="padding:2px 8px;font-size:0.7rem;" onclick="window.zoomToId('${p.idbs}')">Fokus</button></td>
@@ -1118,6 +1223,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         <tr>
           <th>No</th>
           <th>IDSLS</th>
+          <th>ID Sub SLS</th>
           <th>Kode SLS</th>
           <th>Nama SLS</th>
           <th>Kecamatan</th>
@@ -1132,6 +1238,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         tr.innerHTML = `
           <td>${idx + 1}</td>
           <td><strong>${p.idsls || "-"}</strong></td>
+          <td><code>${p.idsubsls || "-"}</code></td>
           <td>${p.kdsls || "-"}</td>
           <td>${p.nmsls || "-"}</td>
           <td>${p.nmkec || "-"}</td>
@@ -1151,7 +1258,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // Export Filtered Table to CSV
   function exportFilteredCsv() {
-    const features = state.filteredData ? state.filteredData.features : [];
+    const features = getFeaturesForTable();
     if (features.length === 0) {
       alert("Tidak ada data untuk diekspor!");
       return;
@@ -1160,18 +1267,20 @@ document.addEventListener("DOMContentLoaded", async function () {
     const dataRows = features.map((f) => {
       const p = f.properties;
       if (state.currentMode === "bs") {
+        const namaWilayah = p.nmsls ? `${p.nmsls}` : (p.nmdesa || "Wilayah");
         return {
           IDBS: p.idbs,
           Kode_BS: p.kdbs,
+          Nama_Wilayah: namaWilayah,
           Kecamatan: p.nmkec,
           Desa: p.nmdesa,
-          SLS: p.nmsls,
           Muatan_KK: p.muatan || p.kk,
           Luas: p.luas,
         };
       } else {
         return {
           IDSLS: p.idsls,
+          ID_Sub_SLS: p.idsubsls || "-",
           Kode_SLS: p.kdsls,
           Nama_SLS: p.nmsls,
           Kecamatan: p.nmkec,
@@ -1182,21 +1291,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const worksheet = XLSX.utils.json_to_sheet(dataRows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Data_Terfilter");
-    XLSX.writeFile(workbook, `BPS_Tanjabbar_${state.currentMode.toUpperCase()}_terfilter.csv`, {
+    const sheetName = state.tableMode === "selected" ? "Target_Terpilih" : "Data_Terfilter";
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    XLSX.writeFile(workbook, `BPS_Tanjabbar_${state.currentMode.toUpperCase()}_${sheetName}.csv`, {
       bookType: "csv",
     });
   }
 
   function copyIdsToClipboard() {
-    const features = state.filteredData ? state.filteredData.features : [];
+    const features = getFeaturesForTable();
     if (features.length === 0) {
       alert("Tidak ada data untuk disalin!");
       return;
     }
 
     const ids = features
-      .map((f) => (state.currentMode === "bs" ? f.properties.idbs : f.properties.idsls))
+      .map((f) => (state.currentMode === "bs" ? f.properties.idbs : (f.properties.idsubsls || f.properties.idsls)))
       .filter(Boolean);
 
     navigator.clipboard.writeText(ids.join("\n")).then(() => {
