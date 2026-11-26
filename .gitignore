@@ -1,0 +1,6 @@
+.DS_Store
+Icon?
+Thumbs.db
+.vercel
+node_modules
+npm-debug.log*

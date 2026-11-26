@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Mapping System</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- SheetJS (XLSX) for reading Excel / CSV files client-side -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-status" style="font-size: 0.9rem; font-weight: 600; color: #1e3a8a;">
+      Memuat Web Mapping System...
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-header-top">
+        <div class="sidebar-header-title">
+          <h1>BPS Tanjab Barat</h1>
+          <p>Web Mapping System</p>
+        </div>
+      </div>
+
+      <!-- User Auth Bar -->
+      <div id="user-auth-bar" class="user-auth-bar">
+        <div id="user-auth-info" class="user-auth-info">
+          <span>Mode Tamu</span>
+        </div>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button id="btn-change-password-open" class="btn btn-secondary" style="display:none; padding: 3px 6px; font-size: 0.7rem;" title="Ubah Kata Sandi">
+            🔑 Sandi
+          </button>
+          <button id="btn-auth-action" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">
+            Masuk
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-body">
+      <!-- Pilihan Layer Utama -->
+      <div class="card-section">
+        <div class="section-title">Mode Layer Peta</div>
+        <div class="btn-group-toggle">
+          <button id="btn-mode-bs" class="btn-toggle active" type="button">Blok Sensus (BS)</button>
+          <button id="btn-mode-sls" class="btn-toggle" type="button">Peta SLS</button>
+        </div>
+      </div>
+
+      <!-- Basemap & Overlay -->
+      <div class="card-section">
+        <div class="section-title">Pilihan Basemap</div>
+        <div class="form-group">
+          <select id="basemap-select" class="form-select">
+            <option value="googleHybrid" selected>Google Satellite Hybrid</option>
+            <option value="bingSatellite">Bing Satellite</option>
+            <option value="esriSatellite">Esri World Imagery</option>
+            <option value="osm">OpenStreetMap Standard</option>
+          </select>
+        </div>
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="chk-desa-overlay" style="cursor: pointer;">
+          <label for="chk-desa-overlay" style="font-size: 0.8rem; cursor: pointer;">Tampilkan Batas Desa (Overlay)</label>
+        </div>
+      </div>
+
+      <!-- Histori Survei Sebelumnya (Fitur Khusus Pengguna Login) -->
+      <div class="card-section">
+        <div class="section-title">
+          <span>Histori Survei Lapangan</span>
+          <span id="badge-auth-status" style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal;">Login Diperlukan</span>
+        </div>
+        
+        <!-- Locked View for Guest -->
+        <div id="survey-history-locked" class="locked-banner">
+          <p>🔒 <strong>Akses Khusus Petugas</strong><br>Silakan login untuk membuka riwayat survei, memuat sampel lapangan sebelumnya, dan menyimpan progres.</p>
+          <button id="btn-locked-login" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;">
+            Login Pengguna
+          </button>
+        </div>
+
+        <!-- Unlocked View for Logged-In User -->
+        <div id="survey-history-unlocked" style="display: none;">
+          <div id="survey-list-container" style="max-height: 180px; overflow-y: auto; margin-bottom: 8px;">
+            <!-- Populated dynamically -->
+          </div>
+          <button id="btn-open-save-survey-modal" class="btn btn-success btn-full" style="padding: 6px; font-size: 0.78rem;">
+            + Simpan Peta & Filter Saat Ini ke Histori
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Wilayah -->
+      <div class="card-section">
+        <div class="section-title">Filter Wilayah Administratif</div>
+        <div class="form-group">
+          <label for="filter-kecamatan">Kecamatan:</label>
+          <select id="filter-kecamatan" class="form-select">
+            <option value="">-- Semua Kecamatan --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="filter-desa">Desa / Kelurahan:</label>
+          <select id="filter-desa" class="form-select">
+            <option value="">-- Semua Desa / Kelurahan --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Pencarian ID -->
+      <div class="card-section">
+        <div class="section-title">Pencarian ID</div>
+        <div class="form-group">
+          <label id="search-label" for="input-search-id">Cari IDBS:</label>
+          <input type="text" id="input-search-id" class="form-control" placeholder="Contoh: 1507010001...">
+        </div>
+      </div>
+
+      <!-- Upload Excel / CSV -->
+      <div class="card-section">
+        <div class="section-title">Upload Target Sampel (Excel/CSV)</div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+          Unggah file Excel (<code>.xlsx</code>) atau <code>.csv</code> yang memiliki kolom <code>idbs</code> atau <code>idsls</code> untuk disorot otomatis di peta.
+        </p>
+        <input type="file" id="file-upload" class="form-control" accept=".xlsx, .xls, .csv">
+        <div id="upload-info" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+          Belum ada file diunggah.
+        </div>
+        <button id="btn-clear-upload" class="btn btn-secondary btn-full" style="margin-top: 6px; padding: 4px;">
+          Hapus Sorotan Upload
+        </button>
+      </div>
+
+      <!-- Tombol Aksi & Reset -->
+      <div style="display: flex; gap: 8px;">
+        <button id="btn-reset-filter" class="btn btn-danger" style="flex: 1;">Reset Filter</button>
+        <button id="btn-view-table" class="btn btn-primary" style="flex: 1;">Lihat Tabel Data</button>
+      </div>
+
+      <!-- Ringkasan Statistik -->
+      <div class="card-section">
+        <div class="section-title">Ringkasan Wilayah Terpilih</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div id="stat-total-count" class="stat-value">0</div>
+            <div class="stat-label">TOTAL WILAYAH</div>
+          </div>
+          <div class="stat-item">
+            <div id="stat-total-muatan" class="stat-value">0</div>
+            <div id="stat-muatan-label" class="stat-label">TOTAL MUATAN / KK</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Terpilih -->
+      <div class="card-section">
+        <div class="section-title">Detail Poligon Terakhir Diklik</div>
+        <div id="selected-feature-box" style="font-size: 0.8rem; color: var(--text-muted);">
+          Klik salah satu poligon pada peta untuk melihat detail atribut lengkap.
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Map Container -->
+  <main id="main-content">
+    <!-- Floating Sidebar Toggle Button -->
+    <button id="sidebar-toggle-btn" title="Buka / Tutup Panel Kontrol">
+      <span>☰</span> Menu
+    </button>
+
+    <!-- Map Floating Controls -->
+    <div style="position: absolute; top: 14px; right: 60px; z-index: 1000; display: flex; gap: 6px;">
+      <button id="btn-locate-me" class="btn btn-secondary" title="Cari Lokasi Saya Sekarang (GPS)" style="box-shadow: var(--shadow-md);">
+        📍 Lokasi Saya
+      </button>
+      <button id="btn-reset-view" class="btn btn-secondary" title="Kembali ke tampilan awal peta" style="box-shadow: var(--shadow-md);">
+        🔄 Reset Tampilan
+      </button>
+    </div>
+
+    <!-- Map Canvas -->
+    <div id="map"></div>
+
+    <!-- Coordinates Display -->
+    <div id="coordinates-bar">
+      <span id="coords-display">Lat: -1.09179, Lon: 103.10924</span>
+    </div>
+
+    <!-- Map Legend -->
+    <div class="map-legend">
+      <h4>Legenda Peta</h4>
+      <div class="legend-item">
+        <span class="legend-color" style="background: rgba(34, 197, 94, 0.45); border-color: #15803d;"></span>
+        <span>Blok Sensus (BS) - Hijau</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: rgba(59, 130, 246, 0.45); border-color: #1d4ed8;"></span>
+        <span>Batas SLS - Biru</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: rgba(239, 68, 68, 0.6); border-color: #dc2626;"></span>
+        <span>Target Cocok / Histori</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: transparent; border: 2px dashed #b45309;"></span>
+        <span>Batas Desa (Overlay)</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Data Table Modal / Bottom Drawer -->
+  <div id="data-modal">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h3 id="table-title" style="font-size: 0.95rem; font-weight: 700;">Tabel Data Terfilter</h3>
+        <button id="btn-export-csv" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">
+          📥 Ekspor ke CSV
+        </button>
+        <button id="btn-copy-ids" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">
+          📋 Salin Semua ID
+        </button>
+      </div>
+      <button id="btn-close-modal" class="btn btn-danger" style="padding: 4px 10px; font-size: 0.75rem;">
+        ✕ Tutup
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="data-table">
+        <thead id="table-header"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="modal-login" class="app-modal">
+    <div class="modal-dialog">
+      <div class="modal-dialog-header">
+        <h3>Login Pengguna Petugas BPS</h3>
+        <button id="btn-close-login" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-dialog-body">
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+          Masuk dengan akun terdaftar di database Excel (Role: <strong>Organik BPS 1507</strong> atau <strong>Eksternal yang diundang</strong>).
+        </p>
+        <div id="login-error-msg" style="display:none; background:#fee2e2; border:1px solid #fecaca; color:#b91c1c; font-size:0.75rem; padding:8px; border-radius:6px; margin-bottom:12px;"></div>
+        <form id="form-login">
+          <div class="form-group">
+            <label for="login-username">Username atau NIP Lama BPS:</label>
+            <input type="text" id="login-username" class="form-control" placeholder="Contoh: adindaizzata atau 340061620" required>
+            <span style="font-size:0.7rem; color:var(--text-muted);">Gunakan username email tanpa @bps.go.id atau 9 digit NIP Lama.</span>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label for="login-password">Kata Sandi:</label>
+            <input type="password" id="login-password" class="form-control" placeholder="Masukkan NIP Lama sebagai sandi default" required>
+          </div>
+          <div style="margin-top: 10px; margin-bottom: 12px; font-size: 0.75rem; color: var(--text-muted);">
+            <em>Akun Cepat (Klik untuk uji coba):</em><br>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+              <button type="button" id="btn-demo-organik1" class="btn btn-secondary" style="font-size:0.7rem; padding:3px 8px;">Adinda Izzata (Organik)</button>
+              <button type="button" id="btn-demo-organik2" class="btn btn-secondary" style="font-size:0.7rem; padding:3px 8px;">Sofia M. (Organik)</button>
+              <button type="button" id="btn-demo-eksternal" class="btn btn-secondary" style="font-size:0.7rem; padding:3px 8px;">Mitra Lapangan (Eksternal)</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" style="padding: 9px;">Masuk Sekarang</button>
+        </form>
+        <div style="margin-top: 14px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 10px;">
+          <a href="data/users.xlsx" download="Database_Pengguna_BPS_1507.xlsx" style="font-size: 0.75rem; color: var(--primary-color); text-decoration: none; font-weight: 600;">
+            📥 Unduh Berkas Database Pengguna (users.xlsx)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ubah Kata Sandi -->
+  <div id="modal-change-password" class="app-modal">
+    <div class="modal-dialog">
+      <div class="modal-dialog-header">
+        <h3>Ubah Kata Sandi Pengguna</h3>
+        <button id="btn-close-change-password" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-dialog-body">
+        <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;">
+          Ubah kata sandi akun Anda untuk sesi aplikasi ini.
+        </p>
+        <div id="change-pass-msg" style="display:none; font-size:0.75rem; padding:8px; border-radius:6px; margin-bottom:12px;"></div>
+        <form id="form-change-password">
+          <div class="form-group">
+            <label for="old-password">Kata Sandi Saat Ini (Lama):</label>
+            <input type="password" id="old-password" class="form-control" placeholder="Masukkan kata sandi lama / NIP Lama" required>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label for="new-password">Kata Sandi Baru:</label>
+            <input type="password" id="new-password" class="form-control" placeholder="Minimal 4 karakter" required minlength="4">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label for="confirm-password">Konfirmasi Kata Sandi Baru:</label>
+            <input type="password" id="confirm-password" class="form-control" placeholder="Ulangi kata sandi baru" required minlength="4">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" style="padding: 9px; margin-top: 10px;">
+            Simpan Kata Sandi Baru
+          </button>
+        </form>
+        <div style="margin-top: 14px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 10px;">
+          <button type="button" id="btn-download-updated-users" class="btn btn-secondary btn-full" style="font-size: 0.72rem; padding: 4px;">
+            📥 Ekspor Database users.xlsx dengan Sandi Baru
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Simpan Survei Baru -->
+  <div id="modal-save-survey" class="app-modal">
+    <div class="modal-dialog">
+      <div class="modal-dialog-header">
+        <h3>Simpan ke Histori Survei</h3>
+        <button id="btn-close-save-survey" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-dialog-body">
+        <form id="form-save-survey">
+          <div class="form-group">
+            <label for="survey-input-name">Nama Survei:</label>
+            <input type="text" id="survey-input-name" class="form-control" placeholder="Contoh: SUSENAS September 2026" required>
+          </div>
+          <div class="form-group">
+            <label for="survey-input-status">Status Progres:</label>
+            <select id="survey-input-status" class="form-select">
+              <option value="Proses">Sedang Berjalan (Proses)</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="survey-input-notes">Catatan Survei:</label>
+            <textarea id="survey-input-notes" class="form-control" rows="2" placeholder="Catatan wilayah, kendala, atau instruksi..."></textarea>
+          </div>
+          <div id="survey-save-preview" style="font-size: 0.78rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; margin-bottom: 12px;">
+            Menyimpan data wilayah yang sedang aktif/terfilter di peta.
+          </div>
+          <button type="submit" class="btn btn-success btn-full" style="padding: 9px;">Simpan Survei</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Custom Modules -->
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
