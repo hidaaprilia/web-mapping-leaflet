@@ -106,30 +106,30 @@ const MapModule = (function () {
     if (isHighlighted) {
       return {
         color: "#fda037", // Oranye terpilih
-        weight: 3.5,
+        weight: 3,
         opacity: 1,
         fillColor: "#fda037",
-        fillOpacity: 0.7,
+        fillOpacity: 0.42,
       };
     }
 
     if (layerType === "bs") {
-      // PETA BLOK SENSUS = HIJAU (#a3f492)
+      // PETA BLOK SENSUS = HIJAU (#a3f492, area dipudarkan/transparan)
       return {
         color: "#a3f492",
-        weight: 2,
-        opacity: 0.95,
+        weight: 1.5,
+        opacity: 0.85,
         fillColor: "#a3f492",
-        fillOpacity: 0.45,
+        fillOpacity: 0.22,
       };
     } else if (layerType === "sls") {
-      // PETA SLS = BIRU (#7d95ff)
+      // PETA SLS = BIRU (#7d95ff, area dipudarkan/transparan)
       return {
         color: "#7d95ff",
-        weight: 2,
-        opacity: 0.95,
+        weight: 1.5,
+        opacity: 0.85,
         fillColor: "#7d95ff",
-        fillOpacity: 0.45,
+        fillOpacity: 0.22,
       };
     } else {
       // Desa (Overlay batas)
@@ -137,9 +137,9 @@ const MapModule = (function () {
         color: "#ffd600", // Kuning terang / Gold
         weight: 2,
         dashArray: "4, 4",
-        opacity: 1,
+        opacity: 0.9,
         fillColor: "#ffb703",
-        fillOpacity: 0.1,
+        fillOpacity: 0.08,
       };
     }
   }
@@ -215,8 +215,8 @@ const MapModule = (function () {
         // Hover Effect
         layer.on("mouseover", function () {
           layer.setStyle({
-            weight: 3,
-            fillOpacity: 0.6,
+            weight: 2.5,
+            fillOpacity: 0.4,
           });
         });
 
