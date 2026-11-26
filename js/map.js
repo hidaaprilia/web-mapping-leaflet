@@ -101,7 +101,7 @@ const MapModule = (function () {
     }
   }
 
-  // Styles: BS HIJAU (#71cf5d), SLS BIRU (#7d95ff), HIGHLIGHT ORANYE (#fda037)
+  // Styles: BS HIJAU (#5bcb95), SLS BIRU (#7d95ff), HIGHLIGHT ORANYE (#fda037)
   function getStyle(feature, layerType, isHighlighted) {
     if (isHighlighted) {
       return {
@@ -114,12 +114,12 @@ const MapModule = (function () {
     }
 
     if (layerType === "bs") {
-      // PETA BLOK SENSUS = HIJAU (#71cf5d, area dipudarkan/transparan)
+      // PETA BLOK SENSUS = HIJAU (#5bcb95, area dipudarkan/transparan)
       return {
-        color: "#71cf5d",
+        color: "#5bcb95",
         weight: 1.5,
         opacity: 0.85,
-        fillColor: "#71cf5d",
+        fillColor: "#5bcb95",
         fillOpacity: 0.22,
       };
     } else if (layerType === "sls") {
