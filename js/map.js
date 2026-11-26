@@ -161,14 +161,17 @@ const MapModule = (function () {
         const p = feature.properties;
         const idLabel = layerType === "bs" ? "IDBS" : "IDSLS";
         const idVal = layerType === "bs" ? p.idbs : p.idsls;
-        const namaWilayah = p.nmsls ? `${p.nmsls}` : (p.nmdesa ? `Desa ${p.nmdesa}` : "Wilayah");
+        const namaSls = p.nmsls || "-";
+        const namaDesa = p.nmdesa || "-";
+        const namaKec = p.nmkec || "-";
 
-        // Tooltip on Hover
+        // Tooltip on Hover: Ditambahkan Nama DESA dan wilayah diubah menjadi Nama SLS
         layer.bindTooltip(
           `<strong>${idLabel}:</strong> ${idVal || "-"}<br>` +
-          `<strong>Wilayah:</strong> ${namaWilayah}<br>` +
-          `<strong>Kecamatan:</strong> ${p.nmkec || "-"}`,
-          { sticky: true, opacity: 0.9 }
+          `<strong>Nama SLS:</strong> ${namaSls}<br>` +
+          `<strong>Nama DESA:</strong> ${namaDesa}<br>` +
+          `<strong>Kecamatan:</strong> ${namaKec}`,
+          { sticky: true, opacity: 0.95 }
         );
 
         // Hover Effect
@@ -234,29 +237,31 @@ const MapModule = (function () {
   function createPopupHtml(layerType, props) {
     if (layerType === "bs") {
       return `
-        <div class="popup-header" style="background: #15803d;">
+        <div class="popup-header" style="background: linear-gradient(135deg, #064e3b 0%, #059669 100%);">
           <h3>Blok Sensus: ${props.kdbs || props.idbs}</h3>
           <p>IDBS: ${props.idbs || "-"}</p>
         </div>
         <div class="popup-body">
+          <div class="popup-row"><span class="popup-label">Nama SLS:</span><span class="popup-val">${props.nmsls || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">Nama DESA:</span><span class="popup-val">${props.nmdesa || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Kecamatan:</span><span class="popup-val">${props.nmkec || "-"}</span></div>
-          <div class="popup-row"><span class="popup-label">Desa/Kelurahan:</span><span class="popup-val">${props.nmdesa || "-"}</span></div>
-          <div class="popup-row"><span class="popup-label">SLS:</span><span class="popup-val">${props.nmsls || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Muatan / KK:</span><span class="popup-val">${props.muatan || props.kk || "0"}</span></div>
           <div class="popup-row"><span class="popup-label">Luas:</span><span class="popup-val">${props.luas ? Number(props.luas).toFixed(2) + " m²" : "-"}</span></div>
-          <div class="popup-row"><span class="popup-label">Status Bangunan (BSTT):</span><span class="popup-val">${props.bstt || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">Status Bangunan:</span><span class="popup-val">${props.bstt || "-"}</span></div>
         </div>
       `;
     } else {
       return `
-        <div class="popup-header" style="background: #1d4ed8;">
+        <div class="popup-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);">
           <h3>SLS: ${props.nmsls || props.idsls}</h3>
           <p>IDSLS: ${props.idsls || "-"}</p>
         </div>
         <div class="popup-body">
+          <div class="popup-row"><span class="popup-label">Nama SLS:</span><span class="popup-val">${props.nmsls || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">Nama DESA:</span><span class="popup-val">${props.nmdesa || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Kecamatan:</span><span class="popup-val">${props.nmkec || "-"}</span></div>
-          <div class="popup-row"><span class="popup-label">Desa/Kelurahan:</span><span class="popup-val">${props.nmdesa || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Kode SLS:</span><span class="popup-val">${props.kdsls || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">ID Sub SLS:</span><span class="popup-val">${props.idsubsls || "-"}</span></div>
         </div>
       `;
     }

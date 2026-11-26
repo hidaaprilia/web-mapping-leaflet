@@ -29,21 +29,21 @@
     <div class="sidebar-header">
       <div class="sidebar-header-top">
         <div class="sidebar-header-title">
-          <h1>BPS Tanjab Barat</h1>
-          <p>Web Mapping System</p>
+          <h1>WEB Mapping SYSTEM</h1>
+          <p>BPS Kabupaten Tanjung Jabung Barat</p>
         </div>
       </div>
 
       <!-- User Auth Bar -->
       <div id="user-auth-bar" class="user-auth-bar">
         <div id="user-auth-info" class="user-auth-info">
-          <span>Mode Tamu</span>
+          <span>Portal Petugas</span>
         </div>
         <div style="display:flex; gap:4px; align-items:center;">
           <button id="btn-change-password-open" class="btn btn-secondary" style="display:none; padding: 3px 6px; font-size: 0.7rem;" title="Ubah Kata Sandi">
             🔑 Sandi
           </button>
-          <button id="btn-auth-action" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">
+          <button id="btn-auth-action" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.72rem;">
             Masuk
           </button>
         </div>
@@ -77,19 +77,17 @@
         </div>
       </div>
 
-      <!-- Histori Survei Sebelumnya (Fitur Khusus Pengguna Login) -->
+      <!-- Histori Survei Lapangan (Fitur Khusus Pengguna Login) -->
       <div class="card-section">
         <div class="section-title">
-          <span>Histori Survei Lapangan</span>
-          <span id="badge-auth-status" style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal;">Login Diperlukan</span>
+          <span>HISTORI SURVEI LAPANGAN</span>
+          <span id="badge-auth-status" class="pill-badge pill-badge-warning">LOGIN DIPERLUKAN</span>
         </div>
         
-        <!-- Locked View for Guest -->
+        <!-- Locked View for Guest: Tombol login disembunyikan sesuai permintaan -->
         <div id="survey-history-locked" class="locked-banner">
-          <p>🔒 <strong>Akses Khusus Petugas</strong><br>Silakan login untuk membuka riwayat survei, memuat sampel lapangan sebelumnya, dan menyimpan progres.</p>
-          <button id="btn-locked-login" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;">
-            Login Pengguna
-          </button>
+          <div class="locked-title">🔒 Akses Khusus Petugas</div>
+          <p>Silakan login untuk membuka riwayat survei, memuat sampel lapangan sebelumnya, dan menyimpan progres.</p>
         </div>
 
         <!-- Unlocked View for Logged-In User -->
@@ -97,7 +95,7 @@
           <div id="survey-list-container" style="max-height: 180px; overflow-y: auto; margin-bottom: 8px;">
             <!-- Populated dynamically -->
           </div>
-          <button id="btn-open-save-survey-modal" class="btn btn-success btn-full" style="padding: 6px; font-size: 0.78rem;">
+          <button id="btn-open-save-survey-modal" class="btn btn-primary btn-full" style="padding: 7px; font-size: 0.78rem;">
             + Simpan Peta & Filter Saat Ini ke Histori
           </button>
         </div>
@@ -156,7 +154,7 @@
         <div class="stats-grid">
           <div class="stat-item">
             <div id="stat-total-count" class="stat-value">0</div>
-            <div class="stat-label">TOTAL WILAYAH</div>
+            <div id="stat-wilayah-label" class="stat-label">TOTAL WILAYAH (IDSUBSLS)</div>
           </div>
           <div class="stat-item">
             <div id="stat-total-muatan" class="stat-value">0</div>

@@ -42,8 +42,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     const bsRes = await fetch("data/peta_bs_202511507.geojson");
     state.bsData = await bsRes.json();
 
-    updateLoading("Memuat data spasial Satuan Lingkungan Setempat (SLS)...");
-    const slsRes = await fetch("data/peta_sls_202511507.geojson");
+    updateLoading("Memuat data spasial Satuan Lingkungan Setempat (SLS 2026)...");
+    const slsRes = await fetch("data/peta_sls_202611507.geojson");
     state.slsData = await slsRes.json();
 
     hideLoading();
@@ -156,8 +156,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (lockedCard) lockedCard.style.display = "none";
       if (unlockedCard) unlockedCard.style.display = "block";
       if (badgeAuth) {
-        badgeAuth.innerText = state.currentUser.role;
-        badgeAuth.style.color = isOrganik ? "var(--bs-stroke)" : "var(--accent-color)";
+        badgeAuth.className = "pill-badge pill-badge-success";
+        badgeAuth.innerText = isOrganik ? "ORGANIK 1507" : "EKSTERNAL";
       }
 
       // Organik bisa simpan survei baru, Eksternal mode baca
@@ -167,7 +167,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       renderSurveyList();
     } else {
-      authInfo.innerHTML = `<span>Mode Tamu (Tanpa Login)</span>`;
+      authInfo.innerHTML = `
+        <span style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:0.76rem; color:#f0fdf4;">
+          <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#34d399;"></span>
+          Portal Petugas
+        </span>
+      `;
       authActionBtn.innerText = "Masuk";
       authActionBtn.className = "btn btn-secondary";
 
@@ -176,8 +181,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (lockedCard) lockedCard.style.display = "block";
       if (unlockedCard) unlockedCard.style.display = "none";
       if (badgeAuth) {
-        badgeAuth.innerText = "Login Diperlukan";
-        badgeAuth.style.color = "var(--text-muted)";
+        badgeAuth.className = "pill-badge pill-badge-warning";
+        badgeAuth.innerText = "LOGIN DIPERLUKAN";
       }
     }
   }
@@ -787,8 +792,23 @@ document.addEventListener("DOMContentLoaded", async function () {
     const totalCountEl = document.getElementById("stat-total-count");
     const totalMuatanEl = document.getElementById("stat-total-muatan");
     const muatanLabelEl = document.getElementById("stat-muatan-label");
+    const wilayahLabelEl = document.getElementById("stat-wilayah-label");
 
-    totalCountEl.innerText = features.length.toLocaleString("id-ID");
+    if (wilayahLabelEl) {
+      wilayahLabelEl.innerText = "TOTAL WILAYAH (IDSUBSLS)";
+    }
+
+    // Total wilayah dihitung berdasarkan jumlah IDSUBSLS
+    let totalWilayah = 0;
+    if (state.currentMode === "sls") {
+      const subslsSet = new Set(features.map((f) => f.properties && f.properties.idsubsls).filter(Boolean));
+      totalWilayah = subslsSet.size > 0 ? subslsSet.size : features.length;
+    } else {
+      const subslsSet = new Set(features.map((f) => f.properties && (f.properties.idsubsls || f.properties.idsls)).filter(Boolean));
+      totalWilayah = subslsSet.size > 0 ? subslsSet.size : features.length;
+    }
+
+    totalCountEl.innerText = totalWilayah.toLocaleString("id-ID");
 
     if (state.currentMode === "bs") {
       muatanLabelEl.innerText = "TOTAL MUATAN / KK";
@@ -810,23 +830,23 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     if (state.currentMode === "bs") {
       detailBox.innerHTML = `
-        <div style="font-size: 0.8rem; line-height: 1.5;">
+        <div style="font-size: 0.8rem; line-height: 1.55;">
           <strong>IDBS:</strong> ${props.idbs || "-"}<br>
-          <strong>Kode BS:</strong> ${props.kdbs || "-"}<br>
+          <strong>Nama SLS:</strong> ${props.nmsls || "-"}<br>
+          <strong>Nama DESA:</strong> ${props.nmdesa || "-"}<br>
           <strong>Kecamatan:</strong> ${props.nmkec || "-"}<br>
-          <strong>Desa:</strong> ${props.nmdesa || "-"}<br>
-          <strong>SLS:</strong> ${props.nmsls || "-"}<br>
           <strong>Muatan / KK:</strong> ${props.muatan || props.kk || "0"}<br>
           <strong>Luas:</strong> ${props.luas ? Number(props.luas).toFixed(2) + " m²" : "-"}
         </div>
       `;
     } else {
       detailBox.innerHTML = `
-        <div style="font-size: 0.8rem; line-height: 1.5;">
+        <div style="font-size: 0.8rem; line-height: 1.55;">
           <strong>IDSLS:</strong> ${props.idsls || "-"}<br>
+          <strong>ID Sub SLS:</strong> ${props.idsubsls || "-"}<br>
           <strong>Nama SLS:</strong> ${props.nmsls || "-"}<br>
-          <strong>Kecamatan:</strong> ${props.nmkec || "-"}<br>
-          <strong>Desa:</strong> ${props.nmdesa || "-"}
+          <strong>Nama DESA:</strong> ${props.nmdesa || "-"}<br>
+          <strong>Kecamatan:</strong> ${props.nmkec || "-"}
         </div>
       `;
     }
