@@ -101,44 +101,44 @@ const MapModule = (function () {
     }
   }
 
-  // Styles: BS HIJAU, SLS BIRU
+  // Styles: BS HIJAU CERAH NEON, SLS BIRU TERANG CYAN, HIGHLIGHT MERAH MENYALA
   function getStyle(feature, layerType, isHighlighted) {
     if (isHighlighted) {
       return {
-        color: "#dc2626", // Red-600
-        weight: 2.5,
-        opacity: 0.95,
-        fillColor: "#ef4444",
-        fillOpacity: 0.6,
+        color: "#ff1744", // Merah menyala / Neon Red
+        weight: 3.5,
+        opacity: 1,
+        fillColor: "#ff1744",
+        fillOpacity: 0.75,
       };
     }
 
     if (layerType === "bs") {
-      // PETA BLOK SENSUS = HIJAU
+      // PETA BLOK SENSUS = HIJAU CERAH NEON (sangat kontras di peta gelap)
       return {
-        color: "#15803d", // Green-700
-        weight: 1.5,
-        opacity: 0.85,
-        fillColor: "#22c55e", // Green-500
-        fillOpacity: 0.28,
+        color: "#00ff88", // Hijau cerah neon
+        weight: 2,
+        opacity: 1,
+        fillColor: "#00e676", // Neon green fill
+        fillOpacity: 0.45,
       };
     } else if (layerType === "sls") {
-      // PETA SLS = BIRU
+      // PETA SLS = BIRU TERANG CYAN (sangat kontras di peta gelap)
       return {
-        color: "#1d4ed8", // Blue-700
-        weight: 1.5,
-        opacity: 0.85,
-        fillColor: "#3b82f6", // Blue-500
-        fillOpacity: 0.28,
+        color: "#00e5ff", // Biru cyan cerah
+        weight: 2,
+        opacity: 1,
+        fillColor: "#00b4d8", // Vivid blue fill
+        fillOpacity: 0.45,
       };
     } else {
       // Desa (Overlay batas)
       return {
-        color: "#d97706", // Amber
+        color: "#ffd600", // Kuning terang / Gold
         weight: 2,
         dashArray: "4, 4",
-        opacity: 0.9,
-        fillColor: "#f59e0b",
+        opacity: 1,
+        fillColor: "#ffb703",
         fillOpacity: 0.1,
       };
     }
@@ -151,39 +151,76 @@ const MapModule = (function () {
       return;
     }
 
+    const highlightLayers = [];
+
     mainGeoJsonLayer = L.geoJSON(geoJsonData, {
       style: function (feature) {
-        const id = layerType === "bs" ? String(feature.properties.idbs) : String(feature.properties.idsls);
-        const isHigh = highlightedIds.has(id);
+        const idBs = String(feature.properties.idbs || "").trim();
+        const idSls = String(feature.properties.idsls || "").trim();
+        const idSubSls = String(feature.properties.idsubsls || "").trim();
+
+        const isHigh =
+          highlightedIds.has(idBs) ||
+          highlightedIds.has(idSls) ||
+          highlightedIds.has(idSubSls) ||
+          (idSubSls && highlightedIds.has(idSubSls.substring(0, 14))) ||
+          (idSls && highlightedIds.has(idSls + "00"));
+
         return getStyle(feature, layerType, isHigh);
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
+        const idBs = String(p.idbs || "").trim();
+        const idSls = String(p.idsls || "").trim();
+        const idSubSls = String(p.idsubsls || "").trim();
+
+        const isHigh =
+          highlightedIds.has(idBs) ||
+          highlightedIds.has(idSls) ||
+          highlightedIds.has(idSubSls) ||
+          (idSubSls && highlightedIds.has(idSubSls.substring(0, 14))) ||
+          (idSls && highlightedIds.has(idSls + "00"));
+
+        if (isHigh) {
+          highlightLayers.push(layer);
+        }
+
         const idLabel = layerType === "bs" ? "IDBS" : "IDSLS";
         const idVal = layerType === "bs" ? p.idbs : p.idsls;
-        const namaSls = p.nmsls || "-";
         const namaDesa = p.nmdesa || "-";
         const namaKec = p.nmkec || "-";
 
-        // Tooltip on Hover: Ditambahkan Nama DESA dan wilayah diubah menjadi Nama SLS
-        layer.bindTooltip(
-          `<strong>${idLabel}:</strong> ${idVal || "-"}<br>` +
-          `<strong>Nama SLS:</strong> ${namaSls}<br>` +
-          `<strong>Nama DESA:</strong> ${namaDesa}<br>` +
-          `<strong>Kecamatan:</strong> ${namaKec}`,
-          { sticky: true, opacity: 0.95 }
-        );
+        let tooltipContent = "";
+        if (layerType === "bs") {
+          // Untuk peta BS: Label Nama Wilayah
+          const namaWilayah = p.nmsls ? `${p.nmsls}` : (p.nmdesa || "Wilayah");
+          tooltipContent =
+            `<strong>${idLabel}:</strong> ${idVal || "-"}<br>` +
+            `<strong>Nama Wilayah:</strong> ${namaWilayah}<br>` +
+            `<strong>Nama DESA:</strong> ${namaDesa}<br>` +
+            `<strong>Kecamatan:</strong> ${namaKec}`;
+        } else {
+          // Untuk peta SLS: Label Nama SLS
+          const namaSls = p.nmsls || "-";
+          tooltipContent =
+            `<strong>${idLabel}:</strong> ${idVal || "-"}<br>` +
+            `<strong>Nama SLS:</strong> ${namaSls}<br>` +
+            `<strong>Nama DESA:</strong> ${namaDesa}<br>` +
+            `<strong>Kecamatan:</strong> ${namaKec}`;
+        }
+
+        // Tooltip on Hover
+        layer.bindTooltip(tooltipContent, { sticky: true, opacity: 0.95 });
 
         // Hover Effect
         layer.on("mouseover", function () {
           layer.setStyle({
             weight: 3,
-            fillOpacity: 0.55,
+            fillOpacity: 0.6,
           });
         });
 
         layer.on("mouseout", function () {
-          const isHigh = highlightedIds.has(String(idVal));
           layer.setStyle(getStyle(feature, layerType, isHigh));
         });
 
@@ -200,8 +237,15 @@ const MapModule = (function () {
       },
     }).addTo(map);
 
-    // Zoom to fit bounds if features exist
-    if (geoJsonData.features.length > 0) {
+    // Bring all highlighted polygons to front so they are never hidden under other layers
+    highlightLayers.forEach((hl) => {
+      try {
+        hl.bringToFront();
+      } catch (e) {}
+    });
+
+    // Zoom to fit bounds if features exist and not specifically handling upload zoom
+    if (geoJsonData.features.length > 0 && highlightedIds.size === 0) {
       try {
         const bounds = mainGeoJsonLayer.getBounds();
         if (bounds.isValid()) {
@@ -219,11 +263,11 @@ const MapModule = (function () {
 
     desaOverlayLayer = L.geoJSON(desaGeoJson, {
       style: {
-        color: "#b45309",
+        color: "#ffd600",
         weight: 2,
         dashArray: "5, 5",
         fillOpacity: 0,
-        opacity: 0.8,
+        opacity: 1,
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
@@ -236,13 +280,14 @@ const MapModule = (function () {
 
   function createPopupHtml(layerType, props) {
     if (layerType === "bs") {
+      const namaWilayah = props.nmsls ? `${props.nmsls}` : (props.nmdesa || "Wilayah");
       return `
         <div class="popup-header" style="background: linear-gradient(135deg, #064e3b 0%, #059669 100%);">
           <h3>Blok Sensus: ${props.kdbs || props.idbs}</h3>
           <p>IDBS: ${props.idbs || "-"}</p>
         </div>
         <div class="popup-body">
-          <div class="popup-row"><span class="popup-label">Nama SLS:</span><span class="popup-val">${props.nmsls || "-"}</span></div>
+          <div class="popup-row"><span class="popup-label">Nama Wilayah:</span><span class="popup-val">${namaWilayah}</span></div>
           <div class="popup-row"><span class="popup-label">Nama DESA:</span><span class="popup-val">${props.nmdesa || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Kecamatan:</span><span class="popup-val">${props.nmkec || "-"}</span></div>
           <div class="popup-row"><span class="popup-label">Muatan / KK:</span><span class="popup-val">${props.muatan || props.kk || "0"}</span></div>
@@ -272,7 +317,8 @@ const MapModule = (function () {
     mainGeoJsonLayer.eachLayer(function (layer) {
       const p = layer.feature.properties;
       const id = layerType === "bs" ? String(p.idbs) : String(p.idsls);
-      if (id === String(idVal)) {
+      const sub = String(p.idsubsls || "");
+      if (id === String(idVal) || sub === String(idVal)) {
         found = true;
         map.fitBounds(layer.getBounds(), { maxZoom: 17, padding: [40, 40] });
         layer.openPopup();

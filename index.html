@@ -140,6 +140,10 @@
         <button id="btn-clear-upload" class="btn btn-secondary btn-full" style="margin-top: 6px; padding: 4px;">
           Hapus Sorotan Upload
         </button>
+        <div id="container-only-samples" style="margin-top: 8px; display: none; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-main); cursor: pointer;">
+          <input type="checkbox" id="chk-only-samples" style="cursor: pointer; accent-color: #ff1744;">
+          <label for="chk-only-samples" style="margin: 0; cursor: pointer; font-weight: 600;">Hanya tampilkan target terunggah di peta</label>
+        </div>
       </div>
 
       <!-- Tombol Aksi & Reset -->
@@ -202,20 +206,20 @@
     <div class="map-legend">
       <h4>Legenda Peta</h4>
       <div class="legend-item">
-        <span class="legend-color" style="background: rgba(34, 197, 94, 0.45); border-color: #15803d;"></span>
-        <span>Blok Sensus (BS) - Hijau</span>
+        <span class="legend-color" style="background: rgba(0, 255, 136, 0.55); border-color: #00ff88;"></span>
+        <span>Blok Sensus (BS) - Hijau Neon</span>
       </div>
       <div class="legend-item">
-        <span class="legend-color" style="background: rgba(59, 130, 246, 0.45); border-color: #1d4ed8;"></span>
-        <span>Batas SLS - Biru</span>
+        <span class="legend-color" style="background: rgba(0, 229, 255, 0.55); border-color: #00e5ff;"></span>
+        <span>Batas SLS - Biru Cerah</span>
       </div>
       <div class="legend-item">
-        <span class="legend-color" style="background: rgba(239, 68, 68, 0.6); border-color: #dc2626;"></span>
-        <span>Target Cocok / Histori</span>
+        <span class="legend-color" style="background: rgba(255, 23, 68, 0.75); border-color: #ff1744;"></span>
+        <span>Target Sampel / Histori (Merah)</span>
       </div>
       <div class="legend-item">
-        <span class="legend-color" style="background: transparent; border: 2px dashed #b45309;"></span>
-        <span>Batas Desa (Overlay)</span>
+        <span class="legend-color" style="background: transparent; border: 2px dashed #ffd600;"></span>
+        <span>Batas Desa (Kuning Emas)</span>
       </div>
     </div>
   </main>

@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     desaData: null,
     filteredData: null,
     highlightedIds: new Set(),
+    showOnlyUploaded: false,
     selectedKecamatan: "",
     selectedDesa: "",
     searchId: "",
@@ -415,10 +416,22 @@ document.addEventListener("DOMContentLoaded", async function () {
     const fileUpload = document.getElementById("file-upload");
     fileUpload.addEventListener("change", handleFileUpload);
 
+    const chkOnlySamples = document.getElementById("chk-only-samples");
+    if (chkOnlySamples) {
+      chkOnlySamples.addEventListener("change", (e) => {
+        state.showOnlyUploaded = e.target.checked;
+        applyFilter();
+      });
+    }
+
     document.getElementById("btn-clear-upload").addEventListener("click", () => {
       fileUpload.value = "";
       state.highlightedIds.clear();
       state.activeSurveyId = null;
+      state.showOnlyUploaded = false;
+      if (chkOnlySamples) chkOnlySamples.checked = false;
+      const containerOnly = document.getElementById("container-only-samples");
+      if (containerOnly) containerOnly.style.display = "none";
       document.getElementById("upload-info").innerText = "Belum ada file diunggah.";
       document.getElementById("upload-info").style.color = "var(--text-muted)";
       renderSurveyList();
@@ -748,6 +761,20 @@ document.addEventListener("DOMContentLoaded", async function () {
       const p = f.properties;
       if (!p) return false;
 
+      // Filter: Hanya tampilkan target terunggah
+      if (state.showOnlyUploaded && state.highlightedIds.size > 0) {
+        const idBs = String(p.idbs || "").trim();
+        const idSls = String(p.idsls || "").trim();
+        const idSubSls = String(p.idsubsls || "").trim();
+        const isMatched =
+          state.highlightedIds.has(idBs) ||
+          state.highlightedIds.has(idSls) ||
+          state.highlightedIds.has(idSubSls) ||
+          (idSubSls && state.highlightedIds.has(idSubSls.substring(0, 14))) ||
+          (idSls && state.highlightedIds.has(idSls + "00"));
+        if (!isMatched) return false;
+      }
+
       // Kecamatan Filter
       if (state.selectedKecamatan && p.nmkec !== state.selectedKecamatan) {
         return false;
@@ -760,8 +787,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       // Search ID Filter
       if (state.searchId) {
-        const idVal = String(state.currentMode === "bs" ? p.idbs : p.idsls);
-        if (!idVal.toLowerCase().includes(state.searchId.toLowerCase())) {
+        const idVal = String(state.currentMode === "bs" ? (p.idbs || "") : (p.idsls || ""));
+        const idSub = String(p.idsubsls || "");
+        if (!idVal.toLowerCase().includes(state.searchId.toLowerCase()) && !idSub.toLowerCase().includes(state.searchId.toLowerCase())) {
           return false;
         }
       }
@@ -774,7 +802,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       features: filteredFeatures,
     };
 
-    // Render to map with BS = HIJAU, SLS = BIRU
+    // Render to map with BS = HIJAU CERAH NEON, SLS = BIRU TERANG CYAN
     MapModule.renderGeoJson(
       state.filteredData,
       state.currentMode,
@@ -794,31 +822,23 @@ document.addEventListener("DOMContentLoaded", async function () {
     const muatanLabelEl = document.getElementById("stat-muatan-label");
     const wilayahLabelEl = document.getElementById("stat-wilayah-label");
 
-    if (wilayahLabelEl) {
-      wilayahLabelEl.innerText = "TOTAL WILAYAH (IDSUBSLS)";
-    }
-
-    // Total wilayah dihitung berdasarkan jumlah IDSUBSLS
-    let totalWilayah = 0;
-    if (state.currentMode === "sls") {
-      const subslsSet = new Set(features.map((f) => f.properties && f.properties.idsubsls).filter(Boolean));
-      totalWilayah = subslsSet.size > 0 ? subslsSet.size : features.length;
-    } else {
-      const subslsSet = new Set(features.map((f) => f.properties && (f.properties.idsubsls || f.properties.idsls)).filter(Boolean));
-      totalWilayah = subslsSet.size > 0 ? subslsSet.size : features.length;
-    }
-
-    totalCountEl.innerText = totalWilayah.toLocaleString("id-ID");
-
     if (state.currentMode === "bs") {
-      muatanLabelEl.innerText = "TOTAL MUATAN / KK";
+      if (wilayahLabelEl) wilayahLabelEl.innerText = "JUMLAH BLOK SENSUS";
+      totalCountEl.innerText = features.length.toLocaleString("id-ID");
+
+      if (muatanLabelEl) muatanLabelEl.innerText = "TOTAL MUATAN / KK";
       const totalMuatan = features.reduce((acc, f) => {
         const val = Number(f.properties.muatan || f.properties.kk || 0);
         return acc + (isNaN(val) ? 0 : val);
       }, 0);
       totalMuatanEl.innerText = totalMuatan.toLocaleString("id-ID");
     } else {
-      muatanLabelEl.innerText = "DESA TERCAKUP";
+      if (wilayahLabelEl) wilayahLabelEl.innerText = "TOTAL WILAYAH (IDSUBSLS)";
+      const subslsSet = new Set(features.map((f) => f.properties && f.properties.idsubsls).filter(Boolean));
+      const totalWilayah = subslsSet.size > 0 ? subslsSet.size : features.length;
+      totalCountEl.innerText = totalWilayah.toLocaleString("id-ID");
+
+      if (muatanLabelEl) muatanLabelEl.innerText = "DESA TERCAKUP";
       const desas = new Set(features.map((f) => f.properties.nmdesa).filter(Boolean));
       totalMuatanEl.innerText = desas.size.toLocaleString("id-ID");
     }
@@ -829,10 +849,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!detailBox) return;
 
     if (state.currentMode === "bs") {
+      const namaWilayah = props.nmsls ? `${props.nmsls}` : (props.nmdesa || "Wilayah");
       detailBox.innerHTML = `
         <div style="font-size: 0.8rem; line-height: 1.55;">
           <strong>IDBS:</strong> ${props.idbs || "-"}<br>
-          <strong>Nama SLS:</strong> ${props.nmsls || "-"}<br>
+          <strong>Nama Wilayah:</strong> ${namaWilayah}<br>
           <strong>Nama DESA:</strong> ${props.nmdesa || "-"}<br>
           <strong>Kecamatan:</strong> ${props.nmkec || "-"}<br>
           <strong>Muatan / KK:</strong> ${props.muatan || props.kk || "0"}<br>
@@ -858,6 +879,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     state.searchId = "";
     state.highlightedIds.clear();
     state.activeSurveyId = null;
+    state.showOnlyUploaded = false;
+
+    const chkOnly = document.getElementById("chk-only-samples");
+    if (chkOnly) chkOnly.checked = false;
+    const containerOnly = document.getElementById("container-only-samples");
+    if (containerOnly) containerOnly.style.display = "none";
 
     document.getElementById("filter-kecamatan").value = "";
     document.getElementById("filter-desa").value = "";
@@ -885,53 +912,165 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (file.name.endsWith(".csv")) {
           workbook = XLSX.read(data, { type: "string" });
         } else {
-          workbook = XLSX.read(data, { type: "binary" });
+          workbook = XLSX.read(data, { type: "binary", raw: false });
         }
 
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false });
 
         if (json.length === 0) {
           alert("File kosong!");
           return;
         }
 
-        // Search for column idbs or idsls
+        // Search for column idsubsls, idsls, idbs, etc.
         const sampleRow = json[0];
         const keys = Object.keys(sampleRow);
-        const targetCol = keys.find(
+        let targetCol = keys.find(
           (k) =>
-            k.toLowerCase().includes("idbs") ||
+            k.toLowerCase().includes("idsubsls") ||
             k.toLowerCase().includes("idsls") ||
-            k.toLowerCase().includes("id_bs") ||
-            k.toLowerCase().includes("id_sls")
-        ) || keys[0];
+            k.toLowerCase().includes("idbs") ||
+            k.toLowerCase().includes("id_sls") ||
+            k.toLowerCase().includes("id_bs")
+        );
 
-        const uploadedIds = new Set();
+        // Fallback: check column containing values with '1507'
+        if (!targetCol) {
+          targetCol = keys.find((k) =>
+            json.some((row) => String(row[k] || "").trim().startsWith("1507"))
+          ) || keys[0];
+        }
+
+        const rawUploadedList = [];
+        const uploadedSearchSet = new Set();
+
         json.forEach((row) => {
-          const val = String(row[targetCol]).trim();
-          if (val) uploadedIds.add(val);
-        });
-
-        // Match with current GeoJSON
-        const rawData = getCurrentRawData();
-        const matchedIds = new Set();
-        rawData.features.forEach((f) => {
-          const id = String(state.currentMode === "bs" ? f.properties.idbs : f.properties.idsls);
-          if (uploadedIds.has(id)) {
-            matchedIds.add(id);
+          let val = String(row[targetCol] || "").trim();
+          const idMatch = val.match(/1507\d{10,12}/);
+          if (idMatch) {
+            val = idMatch[0];
+          }
+          if (val) {
+            rawUploadedList.push(val);
+            uploadedSearchSet.add(val);
+            // Jika 16 digit ID (subsls), sertakan juga prefix 14 digit idsls
+            if (val.length === 16) {
+              uploadedSearchSet.add(val.substring(0, 14));
+            }
+            // Jika 14 digit ID, sertakan juga sufiks '00'
+            if (val.length === 14) {
+              uploadedSearchSet.add(val + "00");
+            }
           }
         });
+
+        // Uji kecocokan di data BS vs SLS untuk auto-switch mode jika diperlukan
+        const bsFeatures = state.bsData && state.bsData.features ? state.bsData.features : [];
+        const slsFeatures = state.slsData && state.slsData.features ? state.slsData.features : [];
+
+        let bsMatchCount = 0;
+        bsFeatures.forEach((f) => {
+          const idBs = String(f.properties && f.properties.idbs || "").trim();
+          if (uploadedSearchSet.has(idBs)) bsMatchCount++;
+        });
+
+        let slsMatchCount = 0;
+        slsFeatures.forEach((f) => {
+          const p = f.properties || {};
+          const idSls = String(p.idsls || "").trim();
+          const idSubSls = String(p.idsubsls || "").trim();
+          if (
+            uploadedSearchSet.has(idSls) ||
+            uploadedSearchSet.has(idSubSls) ||
+            (idSubSls && uploadedSearchSet.has(idSubSls.substring(0, 14)))
+          ) {
+            slsMatchCount++;
+          }
+        });
+
+        // Auto-switch mode berdasarkan kecocokan tertinggi
+        if (slsMatchCount > bsMatchCount && state.currentMode !== "sls") {
+          switchMode("sls");
+        } else if (bsMatchCount > slsMatchCount && state.currentMode !== "bs") {
+          switchMode("bs");
+        }
+
+        // Ambil fitur pada mode aktif yang cocok
+        const activeRawData = getCurrentRawData();
+        const matchedIds = new Set();
+        const matchedPolygons = [];
+
+        activeRawData.features.forEach((f) => {
+          const p = f.properties || {};
+          const idBs = String(p.idbs || "").trim();
+          const idSls = String(p.idsls || "").trim();
+          const idSubSls = String(p.idsubsls || "").trim();
+
+          const isMatch =
+            uploadedSearchSet.has(idBs) ||
+            uploadedSearchSet.has(idSls) ||
+            uploadedSearchSet.has(idSubSls) ||
+            (idSubSls && uploadedSearchSet.has(idSubSls.substring(0, 14))) ||
+            (idSls && uploadedSearchSet.has(idSls + "00"));
+
+          if (isMatch) {
+            if (state.currentMode === "bs") {
+              if (idBs) matchedIds.add(idBs);
+            } else {
+              if (idSls) matchedIds.add(idSls);
+              if (idSubSls) matchedIds.add(idSubSls);
+              if (idSubSls && idSubSls.length === 16) matchedIds.add(idSubSls.substring(0, 14));
+            }
+            matchedPolygons.push(f);
+          }
+        });
+
+        // Masukkan juga seluruh uploaded ID ke state.highlightedIds
+        uploadedSearchSet.forEach((id) => matchedIds.add(id));
 
         state.highlightedIds = matchedIds;
         state.activeSurveyId = null;
 
+        // Hitung total baris unik sampel yang berhasil cocok
+        const uniqueUploaded = Array.from(new Set(rawUploadedList));
+        const matchedUploadedCount = uniqueUploaded.filter((uId) => {
+          const u14 = uId.length === 16 ? uId.substring(0, 14) : uId;
+          return matchedPolygons.some((f) => {
+            const p = f.properties || {};
+            return (
+              String(p.idbs || "").trim() === uId ||
+              String(p.idsls || "").trim() === uId ||
+              String(p.idsls || "").trim() === u14 ||
+              String(p.idsubsls || "").trim() === uId
+            );
+          });
+        }).length;
+
         const infoEl = document.getElementById("upload-info");
-        infoEl.innerHTML = `<strong>${matchedIds.size}</strong> dari <strong>${uploadedIds.size}</strong> ID cocok di peta (Kolom: <code>${targetCol}</code>). Poligon disorot merah.`;
-        infoEl.style.color = "var(--primary-color)";
+        infoEl.innerHTML = `✓ <strong>${matchedUploadedCount}</strong> dari <strong>${uniqueUploaded.length}</strong> target cocok di peta (Kolom: <code>${targetCol}</code>). Poligon disorot merah menyala.`;
+        infoEl.style.color = "#15803d";
+
+        const containerOnlySamples = document.getElementById("container-only-samples");
+        if (containerOnlySamples) {
+          containerOnlySamples.style.display = "flex";
+        }
 
         applyFilter();
+
+        // Otomatis zoom ke poligon target sampel yang cocok
+        if (matchedPolygons.length > 0) {
+          try {
+            const tempGeoJson = L.geoJSON({ type: "FeatureCollection", features: matchedPolygons });
+            const bounds = tempGeoJson.getBounds();
+            if (bounds.isValid()) {
+              MapModule.getMap().fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+            }
+          } catch (e) {
+            console.warn("Fit bounds error:", e);
+          }
+        }
       } catch (err) {
         console.error("Gagal membaca file upload:", err);
         alert("Gagal memproses file Excel/CSV: " + err.message);
